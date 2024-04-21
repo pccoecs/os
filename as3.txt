@@ -1,0 +1,70 @@
+#include <iostream>
+#include <unistd.h>
+#include <cstring>
+
+int main() {
+    int pipefds1[2], pipefds2[2];
+    int returnstatus1, returnstatus2;
+    int pid;
+    char pipe1writemessage[20] = "Hi";
+    char pipe2writemessage[20] = "Hello";
+    char readmessage[20];
+
+   
+    returnstatus1 = pipe(pipefds1);
+    if (returnstatus1 == -1) {
+        std::cerr << "Unable to create pipe 1" << std::endl;
+        return 1;
+    }
+
+    
+    returnstatus2 = pipe(pipefds2);
+    if (returnstatus2 == -1) {
+        std::cerr << "Unable to create pipe 2" << std::endl;
+        return 1;
+    }
+
+    
+    pid = fork();
+    if (pid != 0) { 
+        close(pipefds1[0]); 
+        close(pipefds2[1]); 
+
+        
+        ssize_t bytes_written = write(pipefds1[1], pipe1writemessage, sizeof(pipe1writemessage));
+        if (bytes_written == -1) {
+            std::cerr << "Error writing to pipe 1" << std::endl;
+            return 1;
+        }
+        std::cout << "In Parent: Writing to pipe 1 - Message is " << pipe1writemessage << std::endl;
+
+        
+        ssize_t bytes_read = read(pipefds2[0], readmessage, sizeof(readmessage));
+        if (bytes_read == -1) {
+            std::cerr << "Error reading from pipe 2" << std::endl;
+            return 1;
+        }
+        std::cout << "In Parent: Reading from pipe 2 - Message is " << readmessage << std::endl;
+    } else { 
+        close(pipefds1[1]); 
+        close(pipefds2[0]); 
+
+        
+        ssize_t bytes_read = read(pipefds1[0], readmessage, sizeof(readmessage));
+        if (bytes_read == -1) {
+            std::cerr << "Error reading from pipe 1" << std::endl;
+            return 1;
+        }
+        std::cout << "In Child: Reading from pipe 1 - Message is " << readmessage << std::endl;
+
+        
+        ssize_t bytes_written = write(pipefds2[1], pipe2writemessage, sizeof(pipe2writemessage));
+        if (bytes_written == -1) {
+            std::cerr << "Error writing to pipe 2" << std::endl;
+            return 1;
+        }
+        std::cout << "In Child: Writing to pipe 2 - Message is " << pipe2writemessage << std::endl;
+    }
+
+    return 0;
+}
